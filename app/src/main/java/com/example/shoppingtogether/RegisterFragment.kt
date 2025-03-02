@@ -54,7 +54,7 @@ class RegisterFragment : Fragment() {
                         // Sign in success, update UI with the signed-in user's information
                         Log.d(TAG, "createUserWithEmail:success")
                         val user = auth.currentUser
-                        findNavController().navigate(R.id.action_registerFragment_to_mainFragment)
+                        // findNavController().navigate(R.id.action_registerFragment_to_mainFragment)
                     } else {
                         // If sign in fails, display a message to the user.
                         Log.w(TAG, "createUserWithEmail:failure", task.exception)

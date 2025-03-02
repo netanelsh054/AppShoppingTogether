@@ -1,8 +1,7 @@
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("androidx.navigation.safeargs.kotlin")
+    id("androidx.navigation.safeargs")
     id("com.google.gms.google-services")
 }
 
@@ -43,7 +42,6 @@ android {
 
 dependencies {
     implementation(libs.firebase.auth.ktx)
-    val nav_version = "2.8.7"
 
     // Jetpack Compose integration
     implementation(libs.androidx.navigation.compose)
@@ -52,16 +50,11 @@ dependencies {
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.ui)
 
-    // Feature module support for Fragments
-    implementation("androidx.navigation:navigation-dynamic-features-fragment:$nav_version")
-    implementation("androidx.navigation:navigation-fragment-ktx:$nav_version")
-    implementation("androidx.navigation:navigation-ui:$nav_version")
     // Testing Navigation
-    androidTestImplementation("androidx.navigation:navigation-testing:$nav_version")
+    androidTestImplementation("androidx.navigation:navigation-testing:2.8.7")
 
     // JSON serialization library, works with the Kotlin serialization plugin
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -72,16 +65,12 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-
     // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
 
-
-    // TODO: Add the dependencies for Firebase products you want to use
-    // When using the BoM, don't specify versions in Firebase dependencies
+    // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics")
 
-    // Add the dependency for the Firebase Authentication library
+    // Firebase Authentication
     implementation("com.google.firebase:firebase-auth")
-
 }
