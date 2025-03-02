@@ -1,59 +1,110 @@
 package com.example.shoppingtogether
 
 import android.os.Bundle
+import android.util.Log
+import android.util.Patterns
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.navigation.fragment.findNavController
+import com.example.shoppingtogether.databinding.FragmentLoginBinding
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
 
-/**
- * A simple [Fragment] subclass.
- * Use the [LoginFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class LoginFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+    private var _binding: FragmentLoginBinding? = null
+    private lateinit var auth: FirebaseAuth
+
+    private val binding get() = _binding!!
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_login, container, false)
+        _binding = FragmentLoginBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment LoginFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            LoginFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+
+        // Check if user is already signed in
+        if (auth.currentUser != null) {
+            // User is already signed in, navigate to home
+            findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+            return
+        }
+
+        val emailEditText = binding.etEmail
+        val passwordEditText = binding.etPassword
+        val loginButton = binding.btnLogin
+        val loadingProgressBar = binding.loading
+        val registerLink = binding.tvRegisterLink
+
+        loginButton.setOnClickListener {
+            loadingProgressBar.visibility = View.VISIBLE
+
+            if (emailEditText.toString().isEmpty() || passwordEditText.toString().isEmpty()) {
+                Toast.makeText(context, "Please fill out all fields", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (!Patterns.EMAIL_ADDRESS.matcher(emailEditText.text.toString()).matches()) {
+                emailEditText.error = "Please enter a valid email address"
+                return@setOnClickListener
+            }
+
+            if (passwordEditText.text.toString().length < 6) {
+                passwordEditText.error = "Password must be at least 6 characters long"
+                return@setOnClickListener
+            }
+
+            performLogin(
+                emailEditText.text.toString(),
+                passwordEditText.text.toString()
+            )
+        }
+
+        registerLink.setOnClickListener {
+            findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
+        }
+    }
+
+    private fun performLogin(email: String, password: String) {
+        binding.loading.visibility = View.VISIBLE
+
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener(requireActivity()) { task ->
+                binding.loading.visibility = View.GONE
+
+                if (task.isSuccessful) {
+                    // Sign in success, update UI with the signed-in user's information
+                    val user = auth.currentUser
+                    Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+                } else {
+                    // If sign in fails, display a message to the user.
+                    val errorMessage = when (task.exception) {
+                        is FirebaseAuthInvalidUserException -> "User not found. Please check your email or register."
+                        is FirebaseAuthInvalidCredentialsException -> "Invalid password. Please try again."
+                        else -> "Authentication failed: ${task.exception?.message}"
+                    }
+                    Log.d("LoginFragment", errorMessage);
+                    Toast.makeText(context, "Authentication failed. Please try again.", Toast.LENGTH_LONG).show();
                 }
             }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }
