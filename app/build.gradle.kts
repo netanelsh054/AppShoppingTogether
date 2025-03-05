@@ -56,6 +56,9 @@ dependencies {
     // JSON serialization library, works with the Kotlin serialization plugin
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
+    // CircleImageView for profile image
+    implementation("de.hdodenhof:circleimageview:3.1.0")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -73,4 +76,10 @@ dependencies {
 
     // Firebase Authentication
     implementation("com.google.firebase:firebase-auth")
+    
+    // Firebase Firestore
+    implementation("com.google.firebase:firebase-firestore")
+    
+    // Firebase Storage
+    implementation("com.google.firebase:firebase-storage")
 }
