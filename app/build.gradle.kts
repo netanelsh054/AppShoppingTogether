@@ -82,4 +82,10 @@ dependencies {
     
     // Firebase Storage
     implementation("com.google.firebase:firebase-storage")
+
+    // OkHttp
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Json Parser
+    implementation("com.squareup.moshi:moshi:1.15.2")
+
 }

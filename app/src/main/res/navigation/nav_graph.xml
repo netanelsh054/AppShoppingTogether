@@ -14,6 +14,9 @@
             app:destination="@id/loginFragment"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_homeFragment_to_addListFragment"
+            app:destination="@id/addListFragment" />
     </fragment>
     <fragment
         android:id="@+id/mainFragment"
@@ -60,4 +63,9 @@
             app:popUpTo="@id/nav_graph"
             app:popUpToInclusive="true" />
     </fragment>
+    <fragment
+        android:id="@+id/addListFragment"
+        android:name="com.example.shoppingtogether.AddListFragment"
+        android:label="fragment_add_list"
+        tools:layout="@layout/fragment_add_list" />
 </navigation>

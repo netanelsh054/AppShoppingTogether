@@ -15,4 +15,8 @@
     <string name="prompt_name">Name</string>
     <string name="select_image">Select Image</string>
     <string name="registering">Registering...</string>
+    <string name="search_for_a_product">Search for a Product</string>
+    <string name="search">Search</string>
+    <string name="enter_shopping_list_name">Enter the name of the Shopping List</string>
+    <string name="save">Save</string>
 </resources>

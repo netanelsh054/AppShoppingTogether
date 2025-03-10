@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.navigation.fragment.findNavController
 import com.example.shoppingtogether.databinding.FragmentLoginBinding
@@ -46,27 +47,17 @@ class LoginFragment : Fragment() {
         val emailEditText = binding.etEmail
         val passwordEditText = binding.etPassword
         val loginButton = binding.btnLogin
-        val loadingProgressBar = binding.loading
         val registerLink = binding.tvRegisterLink
 
+        passwordEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                performLogin(emailEditText.text.toString(), passwordEditText.text.toString())
+                true
+            }
+            false
+        }
+
         loginButton.setOnClickListener {
-            loadingProgressBar.visibility = View.VISIBLE
-
-            if (emailEditText.toString().isEmpty() || passwordEditText.toString().isEmpty()) {
-                Toast.makeText(context, "Please fill out all fields", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (!Patterns.EMAIL_ADDRESS.matcher(emailEditText.text.toString()).matches()) {
-                emailEditText.error = "Please enter a valid email address"
-                return@setOnClickListener
-            }
-
-            if (passwordEditText.text.toString().length < 6) {
-                passwordEditText.error = "Password must be at least 6 characters long"
-                return@setOnClickListener
-            }
-
             performLogin(
                 emailEditText.text.toString(),
                 passwordEditText.text.toString()
@@ -80,6 +71,20 @@ class LoginFragment : Fragment() {
 
     private fun performLogin(email: String, password: String) {
         binding.loading.visibility = View.VISIBLE
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(context, "Please fill out all fields", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            binding.etEmail.error = "Please enter a valid email address"
+            return
+        }
+
+        if (password.length < 6) {
+            binding.etPassword.error = "Password must be at least 6 characters long"
+            return
+        }
 
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(requireActivity()) { task ->

@@ -53,6 +53,10 @@ class HomeFragment : Fragment() {
             findNavController().navigate(R.id.action_homeFragment_to_loginFragment)
         }
 
+        binding.btnCreateList.setOnClickListener {
+            findNavController().navigate(R.id.action_homeFragment_to_addListFragment)
+        }
+
     }
 
     override fun onDestroyView() {
