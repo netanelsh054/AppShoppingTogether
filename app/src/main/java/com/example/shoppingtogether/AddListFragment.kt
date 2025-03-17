@@ -7,7 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import com.example.shoppingtogether.databinding.FragmentAddListBinding
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -25,6 +30,12 @@ class AddListFragment : Fragment() {
     private var _binding: FragmentAddListBinding? = null
     private val binding get() = _binding!!
 
+    private var searchResults = mutableListOf<String>()
+    private var selectedItems = mutableListOf<ShoppingListItem>()
+
+    private lateinit var searchResultAdapter: SearchResultAdapter
+    private lateinit var selectedItemsAdapter: SelectedItemsAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
@@ -38,9 +49,48 @@ class AddListFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        searchResultAdapter = SearchResultAdapter { index -> addToSelectedItems(index) }
+        selectedItemsAdapter = SelectedItemsAdapter { index, isPlus ->
+            onSelectedItemClick(index, isPlus)
+        }
+        binding.rvSearchResults.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = searchResultAdapter
+        }
+
+        binding.rvSelectedItems.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = selectedItemsAdapter
+        }
+
         binding.btnSearch.setOnClickListener {
             search(binding.etProductSearch.text.toString())
         }
+
+        binding.btnSave.setOnClickListener {
+            saveList()
+        }
+    }
+
+    fun addToSelectedItems(index: Int) {
+        var title = searchResults.removeAt(index)
+        Log.d("AddListFragment", "Adding " + title + " to the list")
+        selectedItems.add(ShoppingListItem(title, 1))
+        searchResultAdapter.updateItems(searchResults)
+    }
+
+    fun onSelectedItemClick(index: Int, isPlus: Boolean) {
+        val item = selectedItems[index]
+        if(isPlus)
+            item.quantity++
+        else if(item.quantity > 1)
+            item.quantity--
+        else {
+            selectedItems.removeAt(index)
+            searchResults.add(0, item.name)
+            searchResultAdapter.updateItems(searchResults)
+        }
+        selectedItemsAdapter.updateItems(selectedItems)
     }
 
     private val moshi = Moshi.Builder().build()
@@ -68,13 +118,43 @@ class AddListFragment : Fragment() {
                 override fun onResponse(call: Call, response: Response) {
                     val body = response.body?.source()
                     val products: List<String>? = productsAdapter.fromJson(body)
-                    if (products != null) {
-                        Log.d("AddListFragment", "Products found: $products")
-                    } else {
-                        Log.d("AddListFragment", "No products found")
+                    requireActivity().runOnUiThread {
+                        if (products != null) {
+                            searchResults.clear()
+                            searchResults.addAll(products)
+                            searchResultAdapter.updateItems(searchResults)
+                            Log.d("AddListFragment", "Products found: $products")
+                        } else {
+                            Log.d("AddListFragment", "No products found")
+                        }
                     }
                 }
             }
         )
+    }
+    
+    fun saveList() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId == null) {
+            Toast.makeText(context, "You must be logged in to create a list", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val name = binding.etListName.text.toString()
+
+        val shoppingList = ShoppingList(
+            name = name,
+            products = selectedItems
+        )
+
+        FirebaseFirestore.getInstance().collection("lists")
+            .add(shoppingList)
+            .addOnSuccessListener {
+                Toast.makeText(context, "Shopping list created!", Toast.LENGTH_SHORT).show()
+                findNavController().navigateUp()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
     }
 }
