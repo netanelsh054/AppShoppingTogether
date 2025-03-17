@@ -9,14 +9,12 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import com.example.shoppingtogether.databinding.FragmentAddListBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
-import com.squareup.moshi.adapter
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -36,6 +34,9 @@ class AddListFragment : Fragment() {
     private lateinit var searchResultAdapter: SearchResultAdapter
     private lateinit var selectedItemsAdapter: SelectedItemsAdapter
 
+    private lateinit var firebaseAuth: FirebaseAuth
+    private lateinit var firestore: FirebaseFirestore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
@@ -49,6 +50,9 @@ class AddListFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        firebaseAuth = FirebaseAuth.getInstance()
+        firestore = FirebaseFirestore.getInstance()
+
         searchResultAdapter = SearchResultAdapter { index -> addToSelectedItems(index) }
         selectedItemsAdapter = SelectedItemsAdapter { index, isPlus ->
             onSelectedItemClick(index, isPlus)
@@ -77,6 +81,7 @@ class AddListFragment : Fragment() {
         Log.d("AddListFragment", "Adding " + title + " to the list")
         selectedItems.add(ShoppingListItem(title, 1))
         searchResultAdapter.updateItems(searchResults)
+        selectedItemsAdapter.updateItems(selectedItems)
     }
 
     fun onSelectedItemClick(index: Int, isPlus: Boolean) {
@@ -134,20 +139,30 @@ class AddListFragment : Fragment() {
     }
     
     fun saveList() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val userId = firebaseAuth.currentUser?.uid
+        val name = binding.etListName.text.toString()
         if (userId == null) {
             Toast.makeText(context, "You must be logged in to create a list", Toast.LENGTH_SHORT).show()
             return
         }
+        if (name == "") {
+            Toast.makeText(context, "Enter a name for this list!", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (selectedItems.size == 0) {
+            Toast.makeText(context, "The list is empty!", Toast.LENGTH_LONG).show()
+            return
+        }
 
-        val name = binding.etListName.text.toString()
+        val user = firestore.collection("users").document(userId)
 
         val shoppingList = ShoppingList(
             name = name,
+            user = user,
             products = selectedItems
         )
 
-        FirebaseFirestore.getInstance().collection("lists")
+        firestore.collection("lists")
             .add(shoppingList)
             .addOnSuccessListener {
                 Toast.makeText(context, "Shopping list created!", Toast.LENGTH_SHORT).show()

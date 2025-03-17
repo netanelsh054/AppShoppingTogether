@@ -3,6 +3,7 @@ package com.example.shoppingtogether
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -12,10 +13,10 @@ class SelectedItemsAdapter(
 ): RecyclerView.Adapter<SelectedItemsAdapter.ViewHolder>() {
     private var selectedItems: List<ShoppingListItem> = emptyList()
 
-    class ViewHolder(view: View): RecyclerView.ViewHolder(view) {
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         var tvTitle = view.findViewById<TextView>(R.id.tvSelectedItemTitle)
-        var btnPlusSelected = view.findViewById<ImageButton>(R.id.btnPlusSelect)
-        var btnMinusSelected = view.findViewById<ImageButton>(R.id.btnPlusSelect)
+        var btnPlusSelected = view.findViewById<Button>(R.id.btnPlusSelect)
+        var btnMinusSelected = view.findViewById<Button>(R.id.btnMinusSelect)
         var tvQuantity = view.findViewById<TextView>(R.id.tvQuantity)
     }
 
@@ -33,7 +34,10 @@ class SelectedItemsAdapter(
         holder.tvTitle.text = selectedItem.name
         holder.tvQuantity.text = selectedItem.quantity.toString()
         holder.btnPlusSelected.setOnClickListener { onItemClick(position, true) }
-        holder.btnMinusSelected.setOnClickListener { onItemClick(position, false) }
+        holder.btnMinusSelected.setOnClickListener {
+            onItemClick(position, false)
+            notifyDataSetChanged()
+        }
     }
 
     fun updateItems(newItems: MutableList<ShoppingListItem>) {
