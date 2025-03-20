@@ -2,14 +2,18 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/homeFragment"
-        android:icon="@drawable/ic_launcher_foreground"
+        android:icon="@drawable/ic_home"
         android:title="Home" />
     <item
         android:id="@+id/addListFragment"
-        android:icon="@drawable/ic_launcher_background"
-        android:title="Add Shopping List" />
+        android:icon="@drawable/ic_add_list"
+        android:title="New List" />
+    <item
+        android:id="@+id/myListsFragment"
+        android:icon="@drawable/ic_shopping_cart"
+        android:title="My Lists" />
     <item
         android:id="@+id/profileFragment"
-        android:icon="@drawable/ic_launcher_background"
+        android:icon="@drawable/ic_profile"
         android:title="Profile" />
 </menu>
