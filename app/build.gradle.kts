@@ -58,7 +58,7 @@ dependencies {
 
     // CircleImageView for profile image
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
+    
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -80,9 +80,6 @@ dependencies {
     // Firebase Firestore
     implementation("com.google.firebase:firebase-firestore")
     
-    // Firebase Storage
-    implementation("com.google.firebase:firebase-storage")
-
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Json Parser

@@ -17,6 +17,9 @@
         <action
             android:id="@+id/action_homeFragment_to_addListFragment"
             app:destination="@id/addListFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_profileFragment"
+            app:destination="@id/profileFragment" />
     </fragment>
     <fragment
         android:id="@+id/mainFragment"
@@ -66,6 +69,11 @@
     <fragment
         android:id="@+id/addListFragment"
         android:name="com.example.shoppingtogether.AddListFragment"
-        android:label="fragment_add_list"
+        android:label="Create Shopping List"
         tools:layout="@layout/fragment_add_list" />
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.shoppingtogether.ProfileFragment"
+        android:label="My Profile"
+        tools:layout="@layout/fragment_profile" />
 </navigation>

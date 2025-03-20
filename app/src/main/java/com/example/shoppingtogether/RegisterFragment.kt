@@ -2,9 +2,12 @@ package com.example.shoppingtogether
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64
 import android.util.Log
 import android.util.Patterns
 import androidx.fragment.app.Fragment
@@ -22,14 +25,13 @@ import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.FirebaseStorage
+import java.io.ByteArrayOutputStream
 
 
 class RegisterFragment : Fragment() {
     private var _binding: FragmentRegisterBinding? = null
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
-    private lateinit var storage: FirebaseStorage
     private var selectedImageUri: Uri? = null
 
     private val binding get() = _binding!!
@@ -53,7 +55,6 @@ class RegisterFragment : Fragment() {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
         auth = FirebaseAuth.getInstance()
         firestore = FirebaseFirestore.getInstance()
-        storage = FirebaseStorage.getInstance()
         return binding.root
     }
 
@@ -79,8 +80,22 @@ class RegisterFragment : Fragment() {
 
         // Set up image selection
         selectImageButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            getContent.launch(intent)
+            try {
+                // Use ACTION_GET_CONTENT instead of ACTION_PICK for better compatibility
+                val intent = Intent(Intent.ACTION_GET_CONTENT)
+                intent.type = "image/*"
+                intent.addCategory(Intent.CATEGORY_OPENABLE)
+                
+                // Add these flags to avoid the Google Photos app issues
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                
+                // Try to show a chooser with all available image sources
+                val chooserIntent = Intent.createChooser(intent, "Select Image")
+                getContent.launch(chooserIntent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error launching image picker", e)
+                Toast.makeText(context, "Error opening image picker: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
 
         registerButton.setOnClickListener() {
@@ -119,23 +134,12 @@ class RegisterFragment : Fragment() {
                         // Sign up success, update UI with the signed-in user's information
                         val user = auth.currentUser
                         
-                        // Upload profile image if selected
+                        // Process profile image if selected
                         if (selectedImageUri != null) {
-                            val profileImagesRef = storage.reference.child("profile_images/${user?.uid}")
-                            
-                            profileImagesRef.putFile(selectedImageUri!!)
-                                .addOnSuccessListener { taskSnapshot ->
-                                    // Get the download URL
-                                    profileImagesRef.downloadUrl.addOnSuccessListener { uri ->
-                                        // Save user data to Firestore with image URL
-                                        saveUserToFirestore(user?.uid, name, email, uri.toString())
-                                    }
-                                }
-                                .addOnFailureListener { e ->
-                                    Log.e(TAG, "Failed to upload profile image", e)
-                                    // Save user data without image
-                                    saveUserToFirestore(user?.uid, name, email, null)
-                                }
+                            convertImageToBase64(selectedImageUri!!) { base64Image ->
+                                // Save user data to Firestore with image as Base64
+                                saveUserToFirestore(user?.uid, name, email, base64Image)
+                            }
                         } else {
                             // Save user data without image
                             saveUserToFirestore(user?.uid, name, email, null)
@@ -159,8 +163,30 @@ class RegisterFragment : Fragment() {
             findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
         }
     }
+    
+    private fun convertImageToBase64(uri: Uri, callback: (String?) -> Unit) {
+        try {
+            // Get bitmap from Uri
+            val inputStream = requireContext().contentResolver.openInputStream(uri)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            // Compress and convert to Base64
+            val outputStream = ByteArrayOutputStream()
+            // Compress to reduce size (adjust quality as needed)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            val byteArray = outputStream.toByteArray()
+            val base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT)
+            
+            callback(base64Image)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to encode image", e)
+            Toast.makeText(requireContext(), "Failed to process image", Toast.LENGTH_SHORT).show()
+            callback(null)
+        }
+    }
 
-    private fun saveUserToFirestore(userId: String?, name: String, email: String, profileImageUrl: String?) {
+    private fun saveUserToFirestore(userId: String?, name: String, email: String, profileImageBase64: String?) {
         if (userId == null) {
             Log.e(TAG, "User ID is null, cannot save to Firestore")
             return
@@ -170,7 +196,7 @@ class RegisterFragment : Fragment() {
             "userId" to userId,
             "name" to name,
             "email" to email,
-            "profileImageUrl" to profileImageUrl,
+            "profileImageBase64" to profileImageBase64,
             "createdAt" to System.currentTimeMillis()
         )
 
