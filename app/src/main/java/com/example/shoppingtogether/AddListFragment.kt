@@ -126,6 +126,19 @@ class AddListFragment : Fragment() {
             adapter = selectedItemsAdapter
         }
 
+        // Add enter key listener to search EditText
+        binding.etProductSearch.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
+            ) {
+                search(binding.etProductSearch.text.toString())
+                true
+            } else {
+                false
+            }
+        }
+
         binding.btnSearch.setOnClickListener {
             search(binding.etProductSearch.text.toString())
         }
