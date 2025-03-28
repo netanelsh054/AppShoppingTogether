@@ -49,6 +49,7 @@ dependencies {
     // Views/Fragments integration
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.ui)
+    implementation(libs.androidx.swiperefreshlayout)
 
     // Testing Navigation
     androidTestImplementation("androidx.navigation:navigation-testing:2.8.7")

@@ -36,6 +36,8 @@ import java.util.Locale
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
+import android.util.Patterns
+import com.google.firebase.Timestamp
 import java.io.ByteArrayOutputStream
 
 class AddListFragment : Fragment() {
@@ -45,6 +47,7 @@ class AddListFragment : Fragment() {
 
     private var searchResults = mutableListOf<String>()
     private var selectedItems = mutableListOf<ShoppingListItem>()
+    private val sharedUsers = mutableListOf<String>() // Store emails of users to share with
 
     private lateinit var searchResultAdapter: SearchResultAdapter
     private lateinit var selectedItemsAdapter: SelectedItemsAdapter
@@ -54,6 +57,8 @@ class AddListFragment : Fragment() {
 
     private var imageUri: Uri? = null
     private lateinit var currentPhotoPath: String
+    
+    private val TAG = "AddListFragment"
 
     private val getImageFromGallery = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -63,7 +68,7 @@ class AddListFragment : Fragment() {
                     // Simple image loading without Glide
                     binding.ivListImage.setImageURI(uri)
                 } catch (e: Exception) {
-                    Log.e("AddListFragment", "Error loading image", e)
+                    Log.e(TAG, "Error loading image", e)
                     Toast.makeText(requireContext(), "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -78,20 +83,16 @@ class AddListFragment : Fragment() {
                 imageUri = Uri.fromFile(file)
                 binding.ivListImage.setImageURI(imageUri)
             } catch (e: Exception) {
-                Log.e("AddListFragment", "Error loading camera image", e)
+                Log.e(TAG, "Error loading camera image", e)
                 Toast.makeText(requireContext(), "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentAddListBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -142,16 +143,58 @@ class AddListFragment : Fragment() {
         binding.btnSearch.setOnClickListener {
             search(binding.etProductSearch.text.toString())
         }
+        
+        // Setup share functionality
+        binding.btnAddUser.setOnClickListener {
+            addUserToShareList()
+        }
+        
+        // Update shared users text when list changes
+        updateSharedUsersText()
 
         binding.btnSave.setOnClickListener {
             saveList()
         }
     }
 
+    private fun addUserToShareList() {
+        val email = binding.etShareEmail.text.toString().trim()
+        
+        // Validate email
+        if (email.isEmpty()) {
+            binding.tilShareEmail.error = "Please enter an email address"
+            return
+        }
+        
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            binding.tilShareEmail.error = "Please enter a valid email address"
+            return
+        }
+        
+        // Add email to list if not already there
+        if (!sharedUsers.contains(email)) {
+            sharedUsers.add(email)
+            binding.etShareEmail.text?.clear()
+            binding.tilShareEmail.error = null
+            updateSharedUsersText()
+            Toast.makeText(context, "User added to share list", Toast.LENGTH_SHORT).show()
+        } else {
+            binding.tilShareEmail.error = "This user is already in the share list"
+        }
+    }
+    
+    private fun updateSharedUsersText() {
+        if (sharedUsers.isEmpty()) {
+            binding.tvSharedUsers.text = "No users added yet"
+        } else {
+            binding.tvSharedUsers.text = sharedUsers.joinToString("\n")
+        }
+    }
+
     fun addToSelectedItems(index: Int) {
-        var title = searchResults.removeAt(index)
-        Log.d("AddListFragment", "Adding " + title + " to the list")
-        selectedItems.add(ShoppingListItem(title, 1))
+        val title = searchResults.removeAt(index)
+        Log.d(TAG, "Adding $title to the list")
+        selectedItems.add(ShoppingListItem(title, 1, false))
         searchResultAdapter.updateItems(searchResults)
         selectedItemsAdapter.updateItems(selectedItems)
     }
@@ -194,7 +237,7 @@ class AddListFragment : Fragment() {
         val response = client.newCall(request).enqueue(
             responseCallback = object : okhttp3.Callback {
                 override fun onFailure(call: okhttp3.Call, e: IOException) {
-                    Log.d("AddListFragment", "Failed to search for product", e)
+                    Log.d(TAG, "Failed to search for product", e)
                     requireActivity().runOnUiThread {
                         binding.progressBar.visibility = View.GONE
                         Toast.makeText(requireContext(), "Failed to search for product", Toast.LENGTH_LONG).show()
@@ -210,9 +253,9 @@ class AddListFragment : Fragment() {
                             searchResults.clear()
                             searchResults.addAll(products)
                             searchResultAdapter.updateItems(searchResults)
-                            Log.d("AddListFragment", "Products found: $products")
+                            Log.d(TAG, "Products found: $products")
                         } else {
-                            Log.d("AddListFragment", "No products found")
+                            Log.d(TAG, "No products found")
                             Toast.makeText(requireContext(), "No products found", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -240,14 +283,17 @@ class AddListFragment : Fragment() {
             // Base64 string is ready to be stored in Firestore
             onSuccess(base64Image)
         } catch (e: Exception) {
-            Log.e("AddListFragment", "Failed to encode image", e)
+            Log.e(TAG, "Failed to encode image", e)
             onFailure()
         }
     }
     
     fun saveList() {
         val userId = firebaseAuth.currentUser?.uid
+        val userName = firebaseAuth.currentUser?.displayName ?: "Unknown User"
         val name = binding.etListName.text.toString()
+        val isPublic = binding.switchPublic.isChecked
+        
         if (userId == null) {
             Toast.makeText(context, "You must be logged in to create a list", Toast.LENGTH_SHORT).show()
             return
@@ -264,16 +310,23 @@ class AddListFragment : Fragment() {
         binding.progressBar.visibility = View.VISIBLE
         uploadImage(
             onSuccess = { imageBase64 ->
-                val user = firestore.collection("users").document(userId)
-
+                // Create shopping list with proper fields
                 val shoppingList = hashMapOf(
                     "name" to name,
-                    "user" to user,
+                    "creatorId" to userId,
+                    "creatorName" to userName,
+                    "isPublic" to isPublic,
+                    "sharedWith" to sharedUsers,
                     "imageBase64" to imageBase64,
                     "products" to selectedItems.map { item -> 
-                        hashMapOf("name" to item.name, "quantity" to item.quantity)
+                        hashMapOf(
+                            "name" to item.name, 
+                            "quantity" to item.quantity,
+                            "checked" to item.checked
+                        )
                     },
-                    "createdAt" to com.google.firebase.Timestamp.now()
+                    "createdAt" to Timestamp.now(),
+                    "updatedAt" to Timestamp.now()
                 )
 
                 firestore.collection("lists")
@@ -324,7 +377,7 @@ class AddListFragment : Fragment() {
                 getImageFromCamera.launch(takePictureIntent)
             }
         } catch (e: Exception) {
-            Log.e("AddListFragment", "Error launching camera", e)
+            Log.e(TAG, "Error launching camera", e)
             Toast.makeText(requireContext(), "Error launching camera: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -356,7 +409,7 @@ class AddListFragment : Fragment() {
             val chooserIntent = Intent.createChooser(intent, "Select Image")
             getImageFromGallery.launch(chooserIntent)
         } catch (e: Exception) {
-            Log.e("AddListFragment", "Error launching gallery", e)
+            Log.e(TAG, "Error launching gallery", e)
             Toast.makeText(requireContext(), "Error opening gallery: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }

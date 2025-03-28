@@ -1,31 +1,38 @@
 package com.example.shoppingtogether
 
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.shoppingtogether.databinding.FragmentHomeBinding
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private lateinit var auth: FirebaseAuth
     private val binding get() = _binding!!
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+    
+    private lateinit var viewModel: HomeViewModel
+    private lateinit var myListsAdapter: ShoppingListAdapter
+    private lateinit var sharedListsAdapter: ShoppingListAdapter
+    private lateinit var publicListsAdapter: ShoppingListAdapter
+    
+    private val TAG = "HomeFragment"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
+    ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         auth = FirebaseAuth.getInstance()
+        viewModel = ViewModelProvider(this)[HomeViewModel::class.java]
         return binding.root
     }
 
@@ -36,9 +43,19 @@ class HomeFragment : Fragment() {
         val currentUser = auth.currentUser
         if (currentUser == null) {
             // User is not signed in, navigate to login
+            Log.d(TAG, "onViewCreated: No current user, navigating to login")
             findNavController().navigate(R.id.action_homeFragment_to_loginFragment)
             return
         }
+        
+        // Ensure we have user email for shared lists
+        val userEmail = currentUser.email
+        if (userEmail == null) {
+            Log.w(TAG, "User has no email address - shared lists will not be available")
+            Toast.makeText(context, "Warning: Your account has no email address. Shared lists will not be available.", Toast.LENGTH_LONG).show()
+        }
+        
+        Log.d(TAG, "onViewCreated: User logged in: ${currentUser.uid}, ${currentUser.email}")
 
         // Setup toolbar
         binding.toolbar.title = "Shopping Together"
@@ -47,28 +64,224 @@ class HomeFragment : Fragment() {
         binding.welcomeTextView.text = "Welcome back, ${currentUser.displayName ?: "User"}!"
         binding.textEmail.text = getString(R.string.user_email, currentUser.email)
 
+        // Setup RecyclerViews
+        setupRecyclerViews()
+        
+        // Setup SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            Log.d(TAG, "onRefresh: Manually refreshing lists")
+            viewModel.loadLists(currentUser.uid)
+        }
+
         // Set up navigation via cards
         binding.newListCard.setOnClickListener {
+            Log.d(TAG, "newListCard clicked, navigating to add list")
             findNavController().navigate(R.id.action_homeFragment_to_addListFragment)
         }
 
         binding.myListsCard.setOnClickListener {
             // This would navigate to a My Lists fragment once it's created
-            // For now, just show a toast
+            Log.d(TAG, "myListsCard clicked")
             Toast.makeText(context, "My Lists feature coming soon", Toast.LENGTH_SHORT).show()
         }
 
         binding.profileCard.setOnClickListener {
             // This would navigate to the Profile fragment
+            Log.d(TAG, "profileCard clicked, navigating to profile")
             findNavController().navigate(R.id.profileFragment)
         }
 
         // Set up logout button
         binding.buttonLogout.setOnClickListener {
+            Log.d(TAG, "logout button clicked")
             auth.signOut()
             Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
             findNavController().navigate(R.id.action_homeFragment_to_loginFragment)
         }
+        
+        // Observe ViewModel data
+        observeViewModel()
+        
+        // Load lists
+        Log.d(TAG, "onViewCreated: Initial load of lists for user ${currentUser.uid}, email: ${currentUser.email}")
+        showLoading(true)
+        viewModel.loadLists(currentUser.uid)
+        
+        // Debug: Check for any lists in Firestore
+        checkFirestoreForLists()
+    }
+    
+    private fun setupRecyclerViews() {
+        Log.d(TAG, "setupRecyclerViews: Setting up RecyclerViews")
+        
+        // My Lists RecyclerView
+        myListsAdapter = ShoppingListAdapter { list ->
+            navigateToListDetail(list)
+        }
+        binding.myListsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = myListsAdapter
+        }
+        
+        // Shared Lists RecyclerView
+        sharedListsAdapter = ShoppingListAdapter { list ->
+            navigateToListDetail(list)
+        }
+        binding.sharedListsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = sharedListsAdapter
+        }
+        
+        // Public Lists RecyclerView
+        publicListsAdapter = ShoppingListAdapter { list ->
+            navigateToListDetail(list)
+        }
+        binding.publicListsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = publicListsAdapter
+        }
+        
+        Log.d(TAG, "setupRecyclerViews: All RecyclerViews initialized")
+    }
+    
+    private fun observeViewModel() {
+        Log.d(TAG, "observeViewModel: Setting up observers")
+        
+        // Observe My Lists
+        viewModel.myLists.observe(viewLifecycleOwner) { lists ->
+            Log.d(TAG, "myLists observer: Received ${lists.size} lists")
+            myListsAdapter.updateLists(lists)
+            
+            if (lists.isEmpty()) {
+                Log.d(TAG, "myLists observer: No lists, showing empty view")
+                binding.myListsEmptyText.visibility = View.VISIBLE
+                binding.myListsRecyclerView.visibility = View.GONE
+            } else {
+                Log.d(TAG, "myLists observer: ${lists.size} lists, showing RecyclerView")
+                binding.myListsEmptyText.visibility = View.GONE
+                binding.myListsRecyclerView.visibility = View.VISIBLE
+            }
+        }
+        
+        // Observe Shared Lists
+        viewModel.sharedLists.observe(viewLifecycleOwner) { lists ->
+            Log.d(TAG, "sharedLists observer: Received ${lists.size} lists")
+            sharedListsAdapter.updateLists(lists)
+            
+            if (lists.isEmpty()) {
+                Log.d(TAG, "sharedLists observer: No lists, showing empty view")
+                binding.sharedListsEmptyText.visibility = View.VISIBLE
+                binding.sharedListsRecyclerView.visibility = View.GONE
+            } else {
+                Log.d(TAG, "sharedLists observer: ${lists.size} lists, showing RecyclerView")
+                binding.sharedListsEmptyText.visibility = View.GONE
+                binding.sharedListsRecyclerView.visibility = View.VISIBLE
+            }
+        }
+        
+        // Observe Public Lists
+        viewModel.publicLists.observe(viewLifecycleOwner) { lists ->
+            Log.d(TAG, "publicLists observer: Received ${lists.size} lists")
+            publicListsAdapter.updateLists(lists)
+            
+            if (lists.isEmpty()) {
+                Log.d(TAG, "publicLists observer: No lists, showing empty view")
+                binding.publicListsEmptyText.visibility = View.VISIBLE
+                binding.publicListsRecyclerView.visibility = View.GONE
+            } else {
+                Log.d(TAG, "publicLists observer: ${lists.size} lists, showing RecyclerView")
+                binding.publicListsEmptyText.visibility = View.GONE
+                binding.publicListsRecyclerView.visibility = View.VISIBLE
+            }
+        }
+        
+        // Observe loading state
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            Log.d(TAG, "isLoading observer: Loading state = $isLoading")
+            showLoading(isLoading)
+        }
+        
+        // Observe error messages
+        viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
+            message?.let {
+                Log.e(TAG, "Error message received: $it")
+                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                viewModel.clearError()
+            }
+        }
+    }
+    
+    private fun showLoading(isLoading: Boolean) {
+        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.swipeRefreshLayout.isRefreshing = isLoading
+    }
+    
+    private fun navigateToListDetail(list: ShoppingList) {
+        Log.d(TAG, "navigateToListDetail: Clicked on list ${list.id}, name=${list.name}")
+        val action = HomeFragmentDirections.actionHomeFragmentToEditListFragment(list.id)
+        findNavController().navigate(action)
+    }
+
+    // Debug method to check if there are any lists in Firestore
+    private fun checkFirestoreForLists() {
+        Log.d(TAG, "checkFirestoreForLists: Querying Firestore directly")
+        val db = FirebaseFirestore.getInstance()
+        
+        // Simple query to get all lists (up to 10)
+        db.collection("lists")
+            .limit(10)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (documents.isEmpty) {
+                    Log.d(TAG, "checkFirestoreForLists: No lists found in Firestore")
+                    // Create a test list if no lists exist
+                    auth.currentUser?.let { user ->
+                        createTestList(user.uid, user.displayName ?: "Unknown User")
+                    }
+                } else {
+                    Log.d(TAG, "checkFirestoreForLists: Found ${documents.size()} lists in Firestore")
+                    for (document in documents) {
+                        Log.d(TAG, "List document: ${document.id} => ${document.data}")
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "checkFirestoreForLists: Error querying lists", e)
+            }
+    }
+
+    // Debug method to create a test shopping list
+    private fun createTestList(userId: String, userName: String) {
+        Log.d(TAG, "createTestList: Creating a test list for user $userId")
+        val db = FirebaseFirestore.getInstance()
+        
+        // Create a test list with required fields
+        val testList = hashMapOf(
+            "name" to "Test Shopping List",
+            "creatorId" to userId,
+            "creatorName" to userName,
+            "isPublic" to true,
+            "sharedWith" to listOf<String>(),
+            "products" to listOf(
+                hashMapOf("name" to "Milk", "quantity" to 1, "checked" to false),
+                hashMapOf("name" to "Bread", "quantity" to 2, "checked" to false),
+                hashMapOf("name" to "Eggs", "quantity" to 12, "checked" to false)
+            ),
+            "createdAt" to com.google.firebase.Timestamp.now(),
+            "updatedAt" to com.google.firebase.Timestamp.now()
+        )
+        
+        // Add to Firestore
+        db.collection("lists")
+            .add(testList)
+            .addOnSuccessListener { documentReference ->
+                Log.d(TAG, "createTestList: Test list created with ID: ${documentReference.id}")
+                // Reload lists after creating test list
+                auth.currentUser?.let { viewModel.loadLists(it.uid) }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "createTestList: Error creating test list", e)
+            }
     }
 
     override fun onDestroyView() {

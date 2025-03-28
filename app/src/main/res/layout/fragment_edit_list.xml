@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/background"
-    tools:context=".AddListFragment">
+    tools:context=".EditListFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
@@ -16,7 +16,7 @@
         android:elevation="4dp"
         app:navigationIcon="@drawable/ic_back"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:title="Create Shopping List" />
+        app:title="Edit Shopping List" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -27,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/btnSave">
+            app:layout_constraintBottom_toTopOf="@id/buttonContainer">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -154,29 +154,36 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="List Items"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+                    android:layout_marginTop="16dp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginTop="16dp">
+                    android:layout_marginTop="8dp">
 
                     <EditText
-                        android:id="@+id/etProductSearch"
+                        android:id="@+id/etNewItem"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="@string/search_for_a_product"
+                        android:hint="Add new item"
                         android:inputType="text"
                         android:maxLines="1"
                         android:singleLine="true"
-                        android:imeOptions="actionSearch" />
+                        android:imeOptions="actionDone" />
 
                     <Button
-                        android:id="@+id/btnSearch"
+                        android:id="@+id/btnAddItem"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:text="@string/search" />
+                        android:text="Add" />
                 </LinearLayout>
 
                 <ProgressBar
@@ -186,45 +193,44 @@
                     android:visibility="gone"
                     android:layout_gravity="center" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Search Results"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
-                    android:layout_marginTop="16dp" />
-
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvSearchResults"
+                    android:id="@+id/rvListItems"
                     android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:layout_marginTop="8dp"
-                    android:background="#F5F5F5" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Selected Items"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
-                    android:layout_marginTop="16dp" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvSelectedItems"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp"
+                    android:layout_height="200dp"
                     android:layout_marginTop="8dp"
                     android:background="#F5F5F5" />
 
             </LinearLayout>
         </ScrollView>
 
-        <Button
-            android:id="@+id/btnSave"
+        <LinearLayout
+            android:id="@+id/buttonContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_margin="16dp"
-            android:text="@string/save"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <Button
+                android:id="@+id/btnDelete"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Delete"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="@color/design_default_color_error" />
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="@string/save" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</LinearLayout>
+</LinearLayout> 

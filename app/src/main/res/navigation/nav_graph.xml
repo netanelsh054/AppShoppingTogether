@@ -20,6 +20,9 @@
         <action
             android:id="@+id/action_homeFragment_to_profileFragment"
             app:destination="@id/profileFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_editListFragment"
+            app:destination="@id/editListFragment" />
     </fragment>
     <fragment
         android:id="@+id/mainFragment"
@@ -76,4 +79,13 @@
         android:name="com.example.shoppingtogether.ProfileFragment"
         android:label="My Profile"
         tools:layout="@layout/fragment_profile" />
+    <fragment
+        android:id="@+id/editListFragment"
+        android:name="com.example.shoppingtogether.EditListFragment"
+        android:label="Edit Shopping List"
+        tools:layout="@layout/fragment_edit_list">
+        <argument
+            android:name="listId"
+            app:argType="string" />
+    </fragment>
 </navigation>
