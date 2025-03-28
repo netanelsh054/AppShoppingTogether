@@ -23,6 +23,9 @@
         <action
             android:id="@+id/action_homeFragment_to_editListFragment"
             app:destination="@id/editListFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_viewListFragment"
+            app:destination="@id/viewListFragment" />
     </fragment>
     <fragment
         android:id="@+id/mainFragment"
@@ -84,6 +87,14 @@
         android:name="com.example.shoppingtogether.EditListFragment"
         android:label="Edit Shopping List"
         tools:layout="@layout/fragment_edit_list">
+        <argument
+            android:name="listId"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/viewListFragment"
+        android:name="com.example.shoppingtogether.ViewListFragment"
+        android:label="ViewListFragment" >
         <argument
             android:name="listId"
             app:argType="string" />

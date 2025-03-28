@@ -165,8 +165,17 @@ class HomeFragment : Fragment() {
     
     private fun navigateToListDetail(list: ShoppingList) {
         Log.d(TAG, "navigateToListDetail: Clicked on list ${list.id}, name=${list.name}")
-        val action = HomeFragmentDirections.actionHomeFragmentToEditListFragment(list.id)
-        findNavController().navigate(action)
+        val currentUser = auth.currentUser
+        
+        if (currentUser != null && currentUser.uid == list.creatorId) {
+            // User is the owner, navigate to edit fragment
+            val action = HomeFragmentDirections.actionHomeFragmentToEditListFragment(list.id)
+            findNavController().navigate(action)
+        } else {
+            // User is not the owner, navigate to view fragment
+            val action = HomeFragmentDirections.actionHomeFragmentToViewListFragment(list.id)
+            findNavController().navigate(action)
+        }
     }
 
     // Debug method to check if there are any lists in Firestore
