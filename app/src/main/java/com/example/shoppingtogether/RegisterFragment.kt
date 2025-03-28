@@ -66,7 +66,11 @@ class RegisterFragment : Fragment() {
         // Check if user is already signed in
         if (auth.currentUser != null) {
             // User is already signed in, navigate to home
-            findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+            findNavController().navigate(R.id.homeFragment, null,
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(R.id.nav_graph, true)
+                    .build()
+            )
             return
         }
 
@@ -160,7 +164,7 @@ class RegisterFragment : Fragment() {
         }
 
         loginLink.setOnClickListener() {
-            findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
+            findNavController().navigateUp()
         }
     }
     
@@ -205,7 +209,11 @@ class RegisterFragment : Fragment() {
             .addOnSuccessListener {
                 Log.d(TAG, "User data saved to Firestore")
                 Toast.makeText(context, "Registration completed successfully!", Toast.LENGTH_SHORT).show()
-                findNavController().navigate(R.id.action_registerFragment_to_homeFragment)
+                findNavController().navigate(R.id.homeFragment, null,
+                    androidx.navigation.NavOptions.Builder()
+                        .setPopUpTo(R.id.nav_graph, true)
+                        .build()
+                )
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Error saving user data to Firestore", e)

@@ -40,7 +40,11 @@ class LoginFragment : Fragment() {
         // Check if user is already signed in
         if (auth.currentUser != null) {
             // User is already signed in, navigate to home
-            findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+            findNavController().navigate(R.id.homeFragment, null,
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(R.id.nav_graph, true)
+                    .build()
+            )
             return
         }
 
@@ -94,7 +98,11 @@ class LoginFragment : Fragment() {
                     // Sign in success, update UI with the signed-in user's information
                     val user = auth.currentUser
                     Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                    findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+                    findNavController().navigate(R.id.homeFragment, null,
+                        androidx.navigation.NavOptions.Builder()
+                            .setPopUpTo(R.id.nav_graph, true)
+                            .build()
+                    )
                 } else {
                     // If sign in fails, display a message to the user.
                     val errorMessage = when (task.exception) {

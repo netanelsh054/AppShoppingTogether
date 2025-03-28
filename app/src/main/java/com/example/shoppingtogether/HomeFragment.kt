@@ -20,9 +20,7 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     
     private lateinit var viewModel: HomeViewModel
-    private lateinit var myListsAdapter: ShoppingListAdapter
-    private lateinit var sharedListsAdapter: ShoppingListAdapter
-    private lateinit var publicListsAdapter: ShoppingListAdapter
+    private lateinit var listsAdapter: ShoppingListAdapter
     
     private val TAG = "HomeFragment"
 
@@ -44,7 +42,11 @@ class HomeFragment : Fragment() {
         if (currentUser == null) {
             // User is not signed in, navigate to login
             Log.d(TAG, "onViewCreated: No current user, navigating to login")
-            findNavController().navigate(R.id.action_homeFragment_to_loginFragment)
+            findNavController().navigate(R.id.loginFragment, null, 
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(R.id.nav_graph, true)
+                    .build()
+            )
             return
         }
         
@@ -59,13 +61,29 @@ class HomeFragment : Fragment() {
 
         // Setup toolbar
         binding.toolbar.title = "Shopping Together"
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_logout -> {
+                    Log.d(TAG, "Logout menu item clicked")
+                    auth.signOut()
+                    Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.loginFragment, null, 
+                        androidx.navigation.NavOptions.Builder()
+                            .setPopUpTo(R.id.nav_graph, true)
+                            .build()
+                    )
+                    true
+                }
+                else -> false
+            }
+        }
 
         // Update UI with user information
         binding.welcomeTextView.text = "Welcome back, ${currentUser.displayName ?: "User"}!"
         binding.textEmail.text = getString(R.string.user_email, currentUser.email)
 
-        // Setup RecyclerViews
-        setupRecyclerViews()
+        // Setup RecyclerView
+        setupRecyclerView()
         
         // Setup SwipeRefreshLayout
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -73,30 +91,10 @@ class HomeFragment : Fragment() {
             viewModel.loadLists(currentUser.uid)
         }
 
-        // Set up navigation via cards
-        binding.newListCard.setOnClickListener {
-            Log.d(TAG, "newListCard clicked, navigating to add list")
+        // Setup FAB for adding new list
+        binding.fabAddList.setOnClickListener {
+            Log.d(TAG, "fabAddList clicked, navigating to add list")
             findNavController().navigate(R.id.action_homeFragment_to_addListFragment)
-        }
-
-        binding.myListsCard.setOnClickListener {
-            // This would navigate to a My Lists fragment once it's created
-            Log.d(TAG, "myListsCard clicked")
-            Toast.makeText(context, "My Lists feature coming soon", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.profileCard.setOnClickListener {
-            // This would navigate to the Profile fragment
-            Log.d(TAG, "profileCard clicked, navigating to profile")
-            findNavController().navigate(R.id.profileFragment)
-        }
-
-        // Set up logout button
-        binding.buttonLogout.setOnClickListener {
-            Log.d(TAG, "logout button clicked")
-            auth.signOut()
-            Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_homeFragment_to_loginFragment)
         }
         
         // Observe ViewModel data
@@ -111,87 +109,36 @@ class HomeFragment : Fragment() {
         checkFirestoreForLists()
     }
     
-    private fun setupRecyclerViews() {
-        Log.d(TAG, "setupRecyclerViews: Setting up RecyclerViews")
+    private fun setupRecyclerView() {
+        Log.d(TAG, "setupRecyclerView: Setting up RecyclerView")
         
-        // My Lists RecyclerView
-        myListsAdapter = ShoppingListAdapter { list ->
+        listsAdapter = ShoppingListAdapter { list ->
             navigateToListDetail(list)
         }
-        binding.myListsRecyclerView.apply {
+        binding.listsRecyclerView.apply {
             layoutManager = LinearLayoutManager(context)
-            adapter = myListsAdapter
+            adapter = listsAdapter
         }
         
-        // Shared Lists RecyclerView
-        sharedListsAdapter = ShoppingListAdapter { list ->
-            navigateToListDetail(list)
-        }
-        binding.sharedListsRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = sharedListsAdapter
-        }
-        
-        // Public Lists RecyclerView
-        publicListsAdapter = ShoppingListAdapter { list ->
-            navigateToListDetail(list)
-        }
-        binding.publicListsRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = publicListsAdapter
-        }
-        
-        Log.d(TAG, "setupRecyclerViews: All RecyclerViews initialized")
+        Log.d(TAG, "setupRecyclerView: RecyclerView initialized")
     }
     
     private fun observeViewModel() {
         Log.d(TAG, "observeViewModel: Setting up observers")
         
-        // Observe My Lists
-        viewModel.myLists.observe(viewLifecycleOwner) { lists ->
-            Log.d(TAG, "myLists observer: Received ${lists.size} lists")
-            myListsAdapter.updateLists(lists)
+        // Observe all lists
+        viewModel.allLists.observe(viewLifecycleOwner) { lists ->
+            Log.d(TAG, "allLists observer: Received ${lists.size} lists")
+            listsAdapter.updateLists(lists)
             
             if (lists.isEmpty()) {
-                Log.d(TAG, "myLists observer: No lists, showing empty view")
-                binding.myListsEmptyText.visibility = View.VISIBLE
-                binding.myListsRecyclerView.visibility = View.GONE
+                Log.d(TAG, "allLists observer: No lists, showing empty view")
+                binding.emptyText.visibility = View.VISIBLE
+                binding.listsRecyclerView.visibility = View.GONE
             } else {
-                Log.d(TAG, "myLists observer: ${lists.size} lists, showing RecyclerView")
-                binding.myListsEmptyText.visibility = View.GONE
-                binding.myListsRecyclerView.visibility = View.VISIBLE
-            }
-        }
-        
-        // Observe Shared Lists
-        viewModel.sharedLists.observe(viewLifecycleOwner) { lists ->
-            Log.d(TAG, "sharedLists observer: Received ${lists.size} lists")
-            sharedListsAdapter.updateLists(lists)
-            
-            if (lists.isEmpty()) {
-                Log.d(TAG, "sharedLists observer: No lists, showing empty view")
-                binding.sharedListsEmptyText.visibility = View.VISIBLE
-                binding.sharedListsRecyclerView.visibility = View.GONE
-            } else {
-                Log.d(TAG, "sharedLists observer: ${lists.size} lists, showing RecyclerView")
-                binding.sharedListsEmptyText.visibility = View.GONE
-                binding.sharedListsRecyclerView.visibility = View.VISIBLE
-            }
-        }
-        
-        // Observe Public Lists
-        viewModel.publicLists.observe(viewLifecycleOwner) { lists ->
-            Log.d(TAG, "publicLists observer: Received ${lists.size} lists")
-            publicListsAdapter.updateLists(lists)
-            
-            if (lists.isEmpty()) {
-                Log.d(TAG, "publicLists observer: No lists, showing empty view")
-                binding.publicListsEmptyText.visibility = View.VISIBLE
-                binding.publicListsRecyclerView.visibility = View.GONE
-            } else {
-                Log.d(TAG, "publicLists observer: ${lists.size} lists, showing RecyclerView")
-                binding.publicListsEmptyText.visibility = View.GONE
-                binding.publicListsRecyclerView.visibility = View.VISIBLE
+                Log.d(TAG, "allLists observer: ${lists.size} lists, showing RecyclerView")
+                binding.emptyText.visibility = View.GONE
+                binding.listsRecyclerView.visibility = View.VISIBLE
             }
         }
         

@@ -70,6 +70,8 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private val TAG = "ProfileFragment"
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -83,11 +85,33 @@ class ProfileFragment : Fragment() {
 
         auth = FirebaseAuth.getInstance()
         firestore = FirebaseFirestore.getInstance()
+        // Setup toolbar
+        binding.toolbar.title = "Profile"
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
+
+        // Setup logout button
+        binding.btnLogout.setOnClickListener {
+            Log.d(TAG, "Logout button clicked")
+            auth.signOut()
+            Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+            // Clear back stack and navigate to login
+            findNavController().navigate(R.id.loginFragment, null, 
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(findNavController().graph.startDestinationId, true)
+                    .build()
+            )
+        }
 
         // Check if user is logged in
         val currentUser = auth.currentUser
         if (currentUser == null) {
-            findNavController().navigate(R.id.loginFragment)
+            findNavController().navigate(R.id.loginFragment, null, 
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(findNavController().graph.startDestinationId, true)
+                    .build()
+            )
             return
         }
 
