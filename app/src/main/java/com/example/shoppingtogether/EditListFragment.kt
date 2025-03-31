@@ -147,7 +147,12 @@ class EditListFragment : Fragment() {
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
                     // Convert to ShoppingList object
-                    val list = document.toObject<ShoppingList>()?.copy(id = document.id)
+                    val list = document.toObject<ShoppingList>()?.copy(
+                        id = document.id,
+                        isPublic = document.getBoolean("isPublic") ?: false
+                    )
+                    Log.d(TAG, "isPublic: "+ document.get("isPublic").toString());
+                    Log.d(TAG, list.toString());
                     shoppingList = list
                     
                     if (list != null) {
@@ -178,15 +183,6 @@ class EditListFragment : Fragment() {
                         selectedItems.clear()
                         selectedItems.addAll(list.products)
                         listItemAdapter.updateItems(selectedItems)
-                        
-                        // Check if user is the owner
-                        val isOwner = list.creatorId == firebaseAuth.currentUser?.uid
-                        
-                        // Disable editing if not the owner
-                        if (!isOwner) {
-                            disableEditing()
-                            binding.toolbar.title = "View Shopping List"
-                        }
                     }
                 } else {
                     Log.d(TAG, "No such list")
@@ -201,18 +197,6 @@ class EditListFragment : Fragment() {
                 binding.progressBar.visibility = View.GONE
                 findNavController().navigateUp()
             }
-    }
-    
-    private fun disableEditing() {
-        binding.etListName.isEnabled = false
-        binding.btnSelectImage.isEnabled = false
-        binding.switchPublic.isEnabled = false
-        binding.etShareEmail.isEnabled = false
-        binding.btnAddUser.isEnabled = false
-        binding.etNewItem.isEnabled = false
-        binding.btnAddItem.isEnabled = false
-        binding.btnSave.isEnabled = false
-        binding.btnDelete.visibility = View.GONE
     }
     
     private fun addNewItem() {

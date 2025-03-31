@@ -104,9 +104,7 @@ class HomeFragment : Fragment() {
         Log.d(TAG, "onViewCreated: Initial load of lists for user ${currentUser.uid}, email: ${currentUser.email}")
         showLoading(true)
         viewModel.loadLists(currentUser.uid)
-        
-        // Debug: Check for any lists in Firestore
-        checkFirestoreForLists()
+
     }
     
     private fun setupRecyclerView() {
@@ -176,68 +174,6 @@ class HomeFragment : Fragment() {
             val action = HomeFragmentDirections.actionHomeFragmentToViewListFragment(list.id)
             findNavController().navigate(action)
         }
-    }
-
-    // Debug method to check if there are any lists in Firestore
-    private fun checkFirestoreForLists() {
-        Log.d(TAG, "checkFirestoreForLists: Querying Firestore directly")
-        val db = FirebaseFirestore.getInstance()
-        
-        // Simple query to get all lists (up to 10)
-        db.collection("lists")
-            .limit(10)
-            .get()
-            .addOnSuccessListener { documents ->
-                if (documents.isEmpty) {
-                    Log.d(TAG, "checkFirestoreForLists: No lists found in Firestore")
-                    // Create a test list if no lists exist
-                    auth.currentUser?.let { user ->
-                        createTestList(user.uid, user.displayName ?: "Unknown User")
-                    }
-                } else {
-                    Log.d(TAG, "checkFirestoreForLists: Found ${documents.size()} lists in Firestore")
-                    for (document in documents) {
-                        Log.d(TAG, "List document: ${document.id} => ${document.data}")
-                    }
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "checkFirestoreForLists: Error querying lists", e)
-            }
-    }
-
-    // Debug method to create a test shopping list
-    private fun createTestList(userId: String, userName: String) {
-        Log.d(TAG, "createTestList: Creating a test list for user $userId")
-        val db = FirebaseFirestore.getInstance()
-        
-        // Create a test list with required fields
-        val testList = hashMapOf(
-            "name" to "Test Shopping List",
-            "creatorId" to userId,
-            "creatorName" to userName,
-            "isPublic" to true,
-            "sharedWith" to listOf<String>(),
-            "products" to listOf(
-                hashMapOf("name" to "Milk", "quantity" to 1, "checked" to false),
-                hashMapOf("name" to "Bread", "quantity" to 2, "checked" to false),
-                hashMapOf("name" to "Eggs", "quantity" to 12, "checked" to false)
-            ),
-            "createdAt" to com.google.firebase.Timestamp.now(),
-            "updatedAt" to com.google.firebase.Timestamp.now()
-        )
-        
-        // Add to Firestore
-        db.collection("lists")
-            .add(testList)
-            .addOnSuccessListener { documentReference ->
-                Log.d(TAG, "createTestList: Test list created with ID: ${documentReference.id}")
-                // Reload lists after creating test list
-                auth.currentUser?.let { viewModel.loadLists(it.uid) }
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "createTestList: Error creating test list", e)
-            }
     }
 
     override fun onDestroyView() {

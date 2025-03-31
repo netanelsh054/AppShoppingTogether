@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -19,6 +20,7 @@ class ShoppingListAdapter(
 
     private var lists: List<ShoppingList> = emptyList()
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    private val auth = FirebaseAuth.getInstance()
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val ivListImage: ImageView = view.findViewById(R.id.ivListImage)
@@ -27,6 +29,7 @@ class ShoppingListAdapter(
         val tvItemsPreview: TextView = view.findViewById(R.id.tvItemsPreview)
         val tvUpdatedAt: TextView = view.findViewById(R.id.tvUpdatedAt)
         val tvSharingStatus: TextView = view.findViewById(R.id.tvSharingStatus)
+        val tvOwnershipStatus: TextView = view.findViewById(R.id.tvOwnershipStatus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -37,6 +40,7 @@ class ShoppingListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val list = lists[position]
+        val currentUser = auth.currentUser
         
         // Set list name
         holder.tvListName.text = list.name
@@ -71,6 +75,11 @@ class ShoppingListAdapter(
             else -> android.graphics.Color.parseColor("#9E9E9E") // Gray
         }
         holder.tvSharingStatus.background.setColorFilter(statusColor, android.graphics.PorterDuff.Mode.SRC_IN)
+        
+        // Set ownership status
+        val isOwner = currentUser != null && currentUser.uid == list.creatorId
+        holder.tvOwnershipStatus.visibility = if (isOwner) View.VISIBLE else View.GONE
+        holder.tvOwnershipStatus.text = "Owned"
         
         // Load image if available
         if (!list.imageBase64.isNullOrBlank()) {

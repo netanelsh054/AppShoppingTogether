@@ -47,7 +47,7 @@ class AddListFragment : Fragment() {
 
     private var searchResults = mutableListOf<String>()
     private var selectedItems = mutableListOf<ShoppingListItem>()
-    private val sharedUsers = mutableListOf<String>() // Store emails of users to share with
+    private val sharedUsers = mutableListOf<String>()
 
     private lateinit var searchResultAdapter: SearchResultAdapter
     private lateinit var selectedItemsAdapter: SelectedItemsAdapter
