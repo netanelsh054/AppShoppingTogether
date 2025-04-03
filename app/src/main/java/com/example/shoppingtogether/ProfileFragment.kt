@@ -311,6 +311,11 @@ class ProfileFragment : Fragment() {
                     .addOnSuccessListener {
                         binding.progressBar.visibility = View.GONE
                         Toast.makeText(requireContext(), "Profile updated successfully", Toast.LENGTH_SHORT).show()
+                        findNavController().navigate(R.id.homeFragment, null,
+                            androidx.navigation.NavOptions.Builder()
+                                .setPopUpTo(R.id.nav_graph, true)
+                                .build()
+                        )
                     }
                     .addOnFailureListener { e ->
                         binding.progressBar.visibility = View.GONE
